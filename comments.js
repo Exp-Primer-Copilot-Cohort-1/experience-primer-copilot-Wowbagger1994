@@ -23,4 +23,5 @@ io.sockets.on('connection', function (socket) {
   socket.on('comment', function (data) {
     socket.broadcast.to(data.room).emit('comment', data);
   });
-});
+}
+);
