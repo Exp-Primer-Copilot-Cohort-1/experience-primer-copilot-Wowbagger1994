@@ -1,51 +1,26 @@
 //create web server
-const express = require('express');
-const app = express();
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const port = 3000;
-const path = require('path');
-
-app.use(cors());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
-
-//get all comments
-app.get('/comments', (req, res) => {
-    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
-        if (err) {
-            console.log(err);
-        } else {
-            res.json(JSON.parse(data));
-        }
-    })
+var express = require('express');
+var app = express();
+//use the express middleware for serving static files
+app.use(express.static(__dirname));
+//start the web server on port 3000
+app.listen(3000);
+console.log('Listening on port 3000');
+//create socket server
+var io = require('socket.io').listen(3001);
+//handle incoming connections from clients
+io.sockets.on('connection', function (socket) {
+  //once a client has connected, we expect to get a ping from them saying what room they want to join
+  socket.on('room', function(room) {
+    socket.join(room);
+  });
+  // when the server receives a ping from the client, send them the
+  // current time
+  socket.on('ping', function () {
+    socket.emit('pong', { time: new Date().toJSON() });
+  });
+  // when the server receives a comment, it sends it to the other person in the room.
+  socket.on('comment', function (data) {
+    socket.broadcast.to(data.room).emit('comment', data);
+  });
 });
-
-//get single comment
-app.get('/comments/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
-        if (err) {
-            console.log(err);
-        } else {
-            const comments = JSON.parse(data);
-            const comment = comments.find(comment => comment.id === id);
-            if (comment) {
-                res.json(comment);
-            } else {
-                res.status(404).json({error: `Comment with id ${id} not found`});
-            }
-        }
-    })
-});
-
-//create new comment
-app.post('/comments', (req, res) => {
-    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
-        if (err) {
-            console.log(err);
-        } else {
-            const comments = JSON.parse(data);
-            const newComment = {
-                id: comments.length + 1,
