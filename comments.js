@@ -1,46 +1,51 @@
-//Create Web Server
-var express = require('express');
-var app = express();
-var fs = require("fs");
-var bodyParser = require('body-parser');
+//create web server
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const port = 3000;
+const path = require('path');
 
-// Create application/x-www-form-urlencoded parser
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
-var jsonParser = bodyParser.json()
+app.use(cors());
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
 
-//Create a server
-var server = app.listen(8081, function () {
-    var host = server.address().address
-    var port = server.address().port
-})
+//get all comments
+app.get('/comments', (req, res) => {
+    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
+        if (err) {
+            console.log(err);
+        } else {
+            res.json(JSON.parse(data));
+        }
+    })
+});
 
-//Read the comments
-app.get('/listComments', function (req, res) {
-    fs.readFile(__dirname + "/" + "comments.json", 'utf8', function (err, data) {
-        console.log(data);
-        res.end(data);
-    });
-})
+//get single comment
+app.get('/comments/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
+        if (err) {
+            console.log(err);
+        } else {
+            const comments = JSON.parse(data);
+            const comment = comments.find(comment => comment.id === id);
+            if (comment) {
+                res.json(comment);
+            } else {
+                res.status(404).json({error: `Comment with id ${id} not found`});
+            }
+        }
+    })
+});
 
-//Add Comments
-app.post('/addComments', jsonParser, function (req, res) {
-    // First read existing comments
-    fs.readFile(__dirname + "/" + "comments.json", 'utf8', function (err, data) {
-        data = JSON.parse(data);
-        data["comment" + req.body.id] = req.body;
-        console.log(data);
-        res.end(JSON.stringify(data));
-    });
-})
-
-//Delete Comments
-app.delete('/deleteComments', jsonParser, function (req, res) {
-    // First read existing comments
-    fs.readFile(__dirname + "/" + "comments.json", 'utf8', function (err, data) {
-        data = JSON.parse(data);
-        delete data["comment" + req.body.id];
-
-        console.log(data);
-        res.end(JSON.stringify(data));
-    });
-})
+//create new comment
+app.post('/comments', (req, res) => {
+    fs.readFile('./data/comments.json', 'utf-8', (err, data) => {
+        if (err) {
+            console.log(err);
+        } else {
+            const comments = JSON.parse(data);
+            const newComment = {
+                id: comments.length + 1,
